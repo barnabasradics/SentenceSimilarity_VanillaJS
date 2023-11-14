@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>entence Similarity</title>
+    <!-- Add CSS links here -->
+  <style>
+    #app {
+        margin: auto;
+        width: 50%;
+        padding: 10px;
+    }
+    input {
+        width: 100%;
+        padding: 5px;
+        margin: 5px 0;
+    }
+    button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+    }
+  </style>
+  <script type="module">
+    // Import necessary modules from transformers.js
+    import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0";
+
+    // Set environment variable to prevent using local models
+    env.allowLocalModels = false;
+
+    // Initialize the feature extraction pipeline with the specified model
+    let extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+
+    // Function to compare the similarity between two texts
+    async function compareSimilarity(text1, text2) {
+      console.log("Comparing...");
+
+      // Extract features for each text
+      let output1 = await extractor(text1, { pooling: 'mean', normalize: true });
+      let output2 = await extractor(text2, { pooling: 'mean', normalize: true });
+
+      // Convert tensor output to arrays
+      let vec1 = tensorToArray(output1);
+      let vec2 = tensorToArray(output2);
+
+      // Calculate and return the cosine similarity
+      let similarity = cosineSimilarity(vec1, vec2);
+      console.log(similarity);
+      return similarity;
+    }
+
+    // Function to calculate cosine similarity between two vectors
+    function cosineSimilarity(vecA, vecB) {
+      let dotProduct = 0.0;
+      let normA = 0.0;
+      let normB = 0.0;
+
+      // Compute dot product and norms
+      for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += Math.pow(vecA[i], 2);
+        normB += Math.pow(vecB[i], 2);
+      }
+
+      // Return cosine similarity
+      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    }
+
+    // Function to convert a tensor to an array
+    function tensorToArray(tensor) {
+      return Array.from(tensor.data);
+    }
+
+    // Event listener for the compare button
+    document.getElementById('compareBtn').addEventListener('click', function() {
+      var text1 = document.getElementById('input1').value;
+      var text2 = document.getElementById('input2').value;
+
+      // Set the result text to "Loading" while waiting for the similarity score
+      document.getElementById('result').innerText = 'Loading...';
+
+      // Asynchronously compare similarity and update the result
+      compareSimilarity(text1, text2).then(similarityScore => {
+        // Once the promise is resolved, update the result with the similarity score
+        document.getElementById('result').innerText = 'Similarity Score: ' + similarityScore;
+      }).catch(error => {
+        // In case of an error, log it and show an error message
+        console.error('Error comparing texts:', error);
+        document.getElementById('result').innerText = 'Error in comparison.';
+      });
+    });
+
+  </script>
+</head>
+<body>
+    <div id="app">
+        <input type="text" id="input1" placeholder="Enter first sentence">
+        <input type="text" id="input2" placeholder="Enter second sentence">
+        <button id="compareBtn">Compare</button>
+        <div id="result"></div>
+    </div>
+</body>
+</html>
